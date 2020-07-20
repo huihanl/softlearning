@@ -78,7 +78,7 @@ GAUSSIAN_POLICY_PARAMS_BASE = {
     'class_name': 'FeedforwardGaussianPolicy',
     'config': {
         'hidden_layer_sizes': (M, M),
-        'squash': True,
+        'squash': False, #True,
         'observation_keys': None,
         'preprocessors': None,
     }
@@ -501,7 +501,7 @@ def get_variant_spec_base(env, randomized, use_predictive_model, observation_mod
             'class_name': 'FeedforwardGaussianPolicy',
             'config': {
                 'hidden_layer_sizes': (M, M),
-                'squash': True,
+                'squash': False, #True,
                 'observation_keys': None,
                 'preprocessors': None,
             },
