@@ -10,7 +10,8 @@ import tree
 import ray
 from ray import tune
 
-from softlearning.environments.utils import get_environment_from_params
+#from softlearning.environments.utils import get_environment_from_params
+from softlearning.environments.utils import get_roboverse_env_from_params
 from softlearning import algorithms
 from softlearning import policies
 from softlearning import value_functions
@@ -45,15 +46,19 @@ class ExperimentRunner(tune.Trainable):
         variant = copy.deepcopy(self._variant)
         environment_params = variant['environment_params']
         training_environment = self.training_environment = (
-            get_environment_from_params(environment_params['training']))
+            get_roboverse_env_from_params(environment_params['training']))
         evaluation_environment = self.evaluation_environment = (
-            get_environment_from_params(environment_params['evaluation'])
+            get_roboverse_env_from_params(environment_params['evaluation'])
             if 'evaluation' in environment_params
             else training_environment)
 
+        from collections import OrderedDict
+        changed_obs_shape = OrderedDict()
+        changed_obs_shape['image'] = training_environment.observation_shape['image']
         variant['Q_params']['config'].update({
             'input_shapes': (
-                training_environment.observation_shape,
+                #training_environment.observation_shape,
+                changed_obs_shape,
                 training_environment.action_shape),
         })
         Qs = self.Qs = value_functions.get(variant['Q_params'])
@@ -61,7 +66,7 @@ class ExperimentRunner(tune.Trainable):
         variant['policy_params']['config'].update({
             'action_range': (training_environment.action_space.low,
                              training_environment.action_space.high),
-            'input_shapes': training_environment.observation_shape,
+            'input_shapes': changed_obs_shape, #training_environment.observation_shape,
             'output_shape': training_environment.action_shape,
         })
         policy = self.policy = policies.get(variant['policy_params'])

@@ -86,9 +86,7 @@ def generate_experiment_kwargs(variant_spec, command_line_args):
         local_dir = os.path.join(local_dir, 'debug')
     local_dir = os.path.join(
         local_dir,
-        command_line_args.universe,
-        command_line_args.domain,
-        command_line_args.task)
+        command_line_args.env)
     resources_per_trial = _normalize_trial_resources(
         command_line_args.resources_per_trial,
         command_line_args.trial_cpus,
@@ -98,9 +96,7 @@ def generate_experiment_kwargs(variant_spec, command_line_args):
     upload_dir = (
         os.path.join(
             command_line_args.upload_dir,
-            command_line_args.universe,
-            command_line_args.domain,
-            command_line_args.task)
+            command_line_args.env)
         if command_line_args.upload_dir
         else None)
 

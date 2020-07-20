@@ -364,6 +364,21 @@ def get_max_path_length(universe, domain, task):
     return level_result
 
 
+def get_max_path_length_roboverse(env, use_predictive_model):
+    max_path_choice = {
+        "SawyerGraspV2Reaching-v0": {
+            True: 6,
+            False: 30
+        },
+        "SawyerGraspOne-v0": {
+            True: 6,
+            False: 60
+        }
+    }
+
+    return max_path_choice[env][use_predictive_model]
+
+
 def get_checkpoint_frequency(spec):
     num_checkpoints = 10
     config = spec.get('config', spec)
@@ -413,6 +428,34 @@ def get_algorithm_params(universe, domain, task):
     return algorithm_params
 
 
+def get_algorithm_params_roboverse(env, use_predictive_model):
+    if env == "SawyerGraspOne-v0":
+        if use_predictive_model:
+            n_epochs = 100
+            epoch_length = 100
+        else:
+            n_epochs = 200
+            epoch_length = 1000
+
+    else: # "SawyerGraspV2Reaching-v0"
+        if use_predictive_model:
+            n_epochs = 100
+            epoch_length = 100
+        else:
+            n_epochs = 200
+            epoch_length = 500
+
+    algorithm_params = {
+        'config': {
+            'n_epochs': n_epochs,
+            'epoch_length': epoch_length,
+            'min_pool_size': get_max_path_length_roboverse(env, use_predictive_model),
+            'batch_size': 256,
+        }
+    }
+    return algorithm_params
+
+
 def get_environment_params(universe, domain, task):
     environment_params = (
         ENVIRONMENT_PARAMS_PER_UNIVERSE_DOMAIN_TASK
@@ -421,21 +464,30 @@ def get_environment_params(universe, domain, task):
     return environment_params
 
 
-def get_variant_spec_base(universe, domain, task, policy, algorithm):
+def get_variant_spec_base(env, randomized, use_predictive_model, observation_mode, reward_type, single_obj_reward,
+                          all_random, trimodal_positions_choice, num_objects, model_dir, num_execution_per_step,
+                          policy, algorithm):
     algorithm_params = deep_update(
         ALGORITHM_PARAMS_BASE,
         ALGORITHM_PARAMS_ADDITIONAL.get(algorithm, {}),
-        get_algorithm_params(universe, domain, task),
+        get_algorithm_params_roboverse(env, use_predictive_model),
     )
     variant_spec = {
         'git_sha': get_git_rev(__file__),
-
         'environment_params': {
             'training': {
-                'domain': domain,
-                'task': task,
-                'universe': universe,
-                'kwargs': get_environment_params(universe, domain, task),
+                'env': env,
+                'randomize_env': randomized,
+                'use_predictive_model': use_predictive_model,
+                'obs': observation_mode,
+                'reward_type': reward_type,
+                'single_obj_reward': single_obj_reward,
+                'all_random': all_random,
+                'trimodal_positions_choice': trimodal_positions_choice,
+                'num_objects': num_objects,
+                'model_dir': model_dir,
+                'num_execution_per_step': num_execution_per_step,
+                'kwargs': {'image_shape': (48, 48, 3)}
             },
             'evaluation': tune.sample_from(lambda spec: (
                 spec.get('config', spec)
@@ -443,6 +495,7 @@ def get_variant_spec_base(universe, domain, task, policy, algorithm):
                 ['training']
             )),
         },
+
         # 'policy_params': tune.sample_from(get_policy_params),
         'policy_params': {
             'class_name': 'FeedforwardGaussianPolicy',
@@ -482,7 +535,7 @@ def get_variant_spec_base(universe, domain, task, policy, algorithm):
         'sampler_params': {
             'class_name': 'SimpleSampler',
             'config': {
-                'max_path_length': get_max_path_length(universe, domain, task),
+                'max_path_length': get_max_path_length_roboverse(env, use_predictive_model),
             }
         },
         'run_params': {
@@ -494,7 +547,6 @@ def get_variant_spec_base(universe, domain, task, policy, algorithm):
             'checkpoint_replay_pool': False,
         },
     }
-
     return variant_spec
 
 
@@ -503,17 +555,31 @@ def is_image_env(universe, domain, task, variant_spec):
         variant_spec['environment_params']['training']['kwargs'])
 
 
-def get_variant_spec_image(universe,
-                           domain,
-                           task,
+def is_image_env_roboverse(env):
+    return True
+
+
+def get_variant_spec_image(env,
+                           randomized,
+                           use_predictive_model,
+                           observation_mode,
+                           reward_type,
+                           single_obj_reward,
+                           all_random,
+                           trimodal_positions_choice,
+                           num_objects,
+                           model_dir,
+                           num_execution_per_step,
                            policy,
                            algorithm,
                            *args,
                            **kwargs):
     variant_spec = get_variant_spec_base(
-        universe, domain, task, policy, algorithm, *args, **kwargs)
+        env, randomized, use_predictive_model, observation_mode, reward_type, single_obj_reward,
+        all_random, trimodal_positions_choice, num_objects, model_dir, num_execution_per_step,
+        policy, algorithm, *args, **kwargs)
 
-    if is_image_env(universe, domain, task, variant_spec):
+    if is_image_env_roboverse(env):
         preprocessor_params = {
             'class_name': 'convnet_preprocessor',
             'config': {
@@ -525,10 +591,13 @@ def get_variant_spec_image(universe,
             },
         }
 
+        variant_spec['policy_params']['config']['observation_keys'] = ('image',)
         variant_spec['policy_params']['config']['hidden_layer_sizes'] = (M, M)
         variant_spec['policy_params']['config']['preprocessors'] = {
-            'pixels': deepcopy(preprocessor_params)
+            'image': deepcopy(preprocessor_params)
         }
+
+        variant_spec['exploration_policy_params']['config']['observation_keys'] = ('image',)
 
         variant_spec['Q_params']['config']['hidden_layer_sizes'] = (
             tune.sample_from(lambda spec: (deepcopy(
@@ -538,6 +607,8 @@ def get_variant_spec_image(universe,
                 ['hidden_layer_sizes']
             )))
         )
+
+        variant_spec['Q_params']['config']['observation_keys'] = ('image',)
         variant_spec['Q_params']['config']['preprocessors'] = tune.sample_from(
             lambda spec: (
                 deepcopy(
@@ -552,10 +623,14 @@ def get_variant_spec_image(universe,
 
 
 def get_variant_spec(args):
-    universe, domain, task = args.universe, args.domain, args.task
 
     variant_spec = get_variant_spec_image(
-        universe, domain, task, args.policy, args.algorithm)
+        args.env, args.randomized, args.use_predictive_model, args.observation_mode,
+        args.reward_type, args.single_obj_reward,
+        args.all_random, args.trimodal_positions_choice, args.num_objects,
+        args.model_dir, args.num_execution_per_step,
+        args.policy, args.algorithm
+    )
 
     if args.checkpoint_replay_pool is not None:
         variant_spec['run_params']['checkpoint_replay_pool'] = (

@@ -163,16 +163,61 @@ def get_parser(allow_policy_list=False):
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--universe',
+        '--env',
         type=str,
-        choices=AVAILABLE_UNIVERSES,
-        default=DEFAULT_UNIVERSE)
+        required=True)
+
     parser.add_argument(
-        '--domain',
+        '--randomized',
+        action="store_true",
+        default=False)
+
+    parser.add_argument(
+        '--use_predictive_model',
+        action="store_true",
+        default=False)
+
+    parser.add_argument(
+        "--observation-mode",
+        required=True,
         type=str,
-        default=DEFAULT_DOMAIN)
+        choices=('pixels', 'pixels_debug'))
+
     parser.add_argument(
-        '--task', type=str, default=DEFAULT_TASK)
+        "--reward-type",
+        default='reaching')
+
+    parser.add_argument(
+        "--single-obj-reward",
+        type=int,
+        required=True)
+
+    parser.add_argument(
+        "--all-random",
+        type=bool,
+        default=True)
+
+    parser.add_argument(
+        "--trimodal-positions-choice",
+        type=int,
+        default=0)
+
+    parser.add_argument(
+        "--num-objects",
+        type=int,
+        default=3,
+    )
+
+    parser.add_argument(
+        "--model-dir",
+        type=str,
+        required=True)
+
+    parser.add_argument(
+        "--num-execution-per-step",
+        type=int,
+        required=True)
+
 
     parser.add_argument(
         '--checkpoint-replay-pool',
