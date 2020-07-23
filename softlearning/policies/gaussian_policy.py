@@ -50,6 +50,9 @@ class GaussianPolicy(LatentSpacePolicy):
 
         shifts, scales = self.shift_and_scale_model(observations)
 
+        shifts = tf.clip_by_value(shifts, -1, 1)
+        scales = tf.clip_by_value(scales, 0.01, 2)
+
         if self._deterministic:
             actions = self._action_post_processor(shifts)
         else:
