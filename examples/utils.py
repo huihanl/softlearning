@@ -195,7 +195,7 @@ def get_parser(allow_policy_list=False):
     parser.add_argument(
         "--all-random",
         type=bool,
-        default=True)
+        required=True)
 
     parser.add_argument(
         "--trimodal-positions-choice",

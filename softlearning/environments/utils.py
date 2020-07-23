@@ -1,5 +1,5 @@
 from .adapters.gym_adapter import GymAdapter
-#from .adapters.predictive_wrapper_env import PredictiveModelEnvWrapper
+from .adapters.predictive_wrapper_env import PredictiveModelEnvWrapper
 
 ADAPTERS = {
     'gym': GymAdapter,
@@ -54,6 +54,7 @@ def get_roboverse_env_from_params(environment_params):
     all_random = environment_params['all_random']
     trimodal_positions_choice = environment_params['trimodal_positions_choice']
     num_objects = environment_params['num_objects']
+
 
     base_env = roboverse.make(
         env_name, gui=False, randomize=randomize,

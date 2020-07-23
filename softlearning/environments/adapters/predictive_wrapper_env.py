@@ -83,5 +83,8 @@ class PredictiveModelEnvWrapper:
         obs = self.base_env.reset()
         return obs
 
+    def render_obs(self):
+        return self.base_env.render_obs()
+
     def __getattr__(self, attr):
         return getattr(self.base_env, attr)
